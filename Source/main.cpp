@@ -1,10 +1,20 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <vector>
+#include <filesystem>
 
 #include <wx/msgdlg.h>
+
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+
+struct ScriptInfo
+{
+	std::string sName;
+	std::string sDescription;
+	std::vector<std::string> aTags;
+};
 
 std::map<std::string, std::function<std::string(const std::string&)>> dialogGenMap =
 {
@@ -43,14 +53,12 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	try
+	std::cout << "Products found: ";
+	for (auto it = std::filesystem::directory_iterator(argv[1]); it != std::filesystem::directory_iterator(); it++)
 	{
-		boost::property_tree::read_xml(argv[1], pt);
-	}
-	catch (boost::property_tree::ptree_error& e)
-	{
-		std::cout << e.what() << std::endl;
-		return 1;
+		std::filesystem::path p = *it;
+		if (it->is_directory() && p.extension().string() == ".product")
+			std::cout << p.filename().string() << std::endl;
 	}
 
 	std::cout << "Description: " << pt.get<std::string>("Description", "") << std::endl;
