@@ -69,6 +69,7 @@ int main(int argc, char** argv)
 	//List out the scripts for a specific product
 	if (argc > 2)
 	{
+		//Open the product specific directory
 		std::filesystem::path productsPath(argv[1]);
 		productsPath /= argv[2];
 
@@ -77,27 +78,33 @@ int main(int argc, char** argv)
 		for (auto it = std::filesystem::directory_iterator(productsPath); it != std::filesystem::directory_iterator(); it++)
 		{
 			std::filesystem::path p = *it;
+			//It needs to be a .script folder
 			if (it->is_directory() && p.extension().string() == ".script")
 			{
 				boost::property_tree::ptree pt;
 
+				//Build up the script info list
 				try
 				{
 					ScriptInfo scriptInfo;
 					typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
 					boost::char_separator<char> token(",");
 
+					//Grab the actual script info
 					boost::property_tree::read_xml(p.string() + "\\script.xml", pt);
 					std::cout << p.filename().string() << std::endl;
 
 					scriptInfo.sName = p.filename().string();
 					scriptInfo.sDescription = pt.get<std::string>("Description", "");
+					//Tags are comma separated
 					std::string sTags = pt.get<std::string>("Tags", "");
 
+					//Tokenize tag list
 					tokenizer tokens(sTags, token);
 					for (tokenizer::iterator it = tokens.begin(); it != tokens.end(); it++)
 						scriptInfo.aTags.push_back(*it);
 
+					//Add script info to list
 					scriptList.push_back(scriptInfo);
 				}
 				catch (boost::property_tree::ptree_error& e)
@@ -109,9 +116,6 @@ int main(int argc, char** argv)
 
 		std::cout << std::endl;
 	}
-
-	std::cout << "Description: " << pt.get<std::string>("Description", "") << std::endl;
-	std::cout << "Tags: " << pt.get<std::string>("Tags", "") << std::endl;
 
 	if (pt.get_child_optional("flow"))
 	{
