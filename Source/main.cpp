@@ -8,6 +8,7 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/tokenizer.hpp>
 
 struct ScriptInfo
 {
@@ -47,18 +48,66 @@ int main(int argc, char** argv)
 	boost::property_tree::ptree pt;
 	boost::property_tree::ptree flowRoot;
 
-	if (argc < 2)
+	std::vector<ScriptInfo> scriptList;
+	std::map<std::string, std::vector<ScriptInfo*>> tagMap;
+
+	//List out the product options
+	if (argc > 1)
 	{
-		std::cout << "No file specified" << std::endl;
-		return 1;
+		std::cout << "Opening directory " << argv[1] << std::endl;
+		std::cout << "Products found:" << std::endl;
+		for (auto it = std::filesystem::directory_iterator(argv[1]); it != std::filesystem::directory_iterator(); it++)
+		{
+			std::filesystem::path p = *it;
+			if (it->is_directory() && p.extension().string() == ".product")
+				std::cout << p.filename().string() << std::endl;
+		}
+
+		std::cout << std::endl;
 	}
 
-	std::cout << "Products found: ";
-	for (auto it = std::filesystem::directory_iterator(argv[1]); it != std::filesystem::directory_iterator(); it++)
+	//List out the scripts for a specific product
+	if (argc > 2)
 	{
-		std::filesystem::path p = *it;
-		if (it->is_directory() && p.extension().string() == ".product")
-			std::cout << p.filename().string() << std::endl;
+		std::filesystem::path productsPath(argv[1]);
+		productsPath /= argv[2];
+
+		std::cout << "Opening product " << argv[2] << std::endl;
+		std::cout << "Scripts found:" << std::endl;
+		for (auto it = std::filesystem::directory_iterator(productsPath); it != std::filesystem::directory_iterator(); it++)
+		{
+			std::filesystem::path p = *it;
+			if (it->is_directory() && p.extension().string() == ".script")
+			{
+				boost::property_tree::ptree pt;
+
+				try
+				{
+					ScriptInfo scriptInfo;
+					typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
+					boost::char_separator<char> token(",");
+
+					boost::property_tree::read_xml(p.string() + "\\script.xml", pt);
+					std::cout << p.filename().string() << std::endl;
+
+					scriptInfo.sName = p.filename().string();
+					scriptInfo.sDescription = pt.get<std::string>("Description", "");
+					std::string sTags = pt.get<std::string>("Tags", "");
+
+					tokenizer tokens(sTags, token);
+					for (tokenizer::iterator it = tokens.begin(); it != tokens.end(); it++)
+						scriptInfo.aTags.push_back(*it);
+
+					scriptList.push_back(scriptInfo);
+				}
+				catch (boost::property_tree::ptree_error& e)
+				{
+					std::cout << "Could not parse " << p.filename().string() << std::endl;
+				}
+			}
+		}
+
+		std::cout << std::endl;
 	}
 
 	std::cout << "Description: " << pt.get<std::string>("Description", "") << std::endl;
